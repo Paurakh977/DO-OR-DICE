@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ..utils import MaxPlayersValidator
 from ..helpers import Randomizer
 from colorama import init, Fore
@@ -7,7 +8,7 @@ from typing import Union
 init(autoreset=True)
 
 
-#  Enums classes representing possible dice face outcomes 
+#  Enums classes representing possible dice face outcomes
 class ActiveFace(Enum):
     BACKFIRE = "Backfire"
     POWER_MOVE = "Power Move"
@@ -26,10 +27,27 @@ class FallenFace(Enum):
     NOTHING_2 = "Nothing"
 
 
-class Player():
+class Player:
     """
     Player model that represents a player in the game with its in game methods and attrs.
+
+    Attributes:
+        name (str): The name of the player.
+        hp (int): The health points of the player Default is 20.
+        vp (int): The victory points of the player Default is 0.
+        status (str): The status of the player (alive or fallen) Default is "alive".
+        avatar_url (str): The URL of the player's avatar image Default is "../assests/default.png".
+    
+    Methods:
+        participlate_in_game(): Method for player to participate in the game player list.
+        arrange_players_initially(): Class method to arrange players initially in a pseudo-random order.
+        roll_dice(): Method for player to roll a dice.
+        take_damage(damage): Method for player to take damage and update health points (hp).
+        heal(heal_hp): Method for player to heal and update health points (hp).
+        gain_vp(vp): Method for player to gain victory points (vp).
+        steal_vp(target_player, vp): Method for player to steal victory points (vp) from another player.
     """
+
     player_arrangement = list()
 
     active_face_vals = {
@@ -50,12 +68,19 @@ class Player():
         6: FallenFace.NOTHING_2,
     }
 
-    def __init__(self, name, hp=20, vp=0, status="alive") -> None:
+    def __init__(
+        self, name, hp=20, vp=0, status="alive", avatar="../assests/default.png"
+    ) -> None:
+
         self.name = name
         self.hp = hp
         self.vp = vp
+        self.avatar_url = avatar
         self.status = status
         self.player_id = None
+        self.last_targetedby = None
+        self.last_targetedto = None
+        self.rounds_survived = 0
 
         try:
             self.participlate_in_game()
@@ -81,7 +106,9 @@ class Player():
             Player.player_arrangement.append(self)
             return True
         else:
-            raise MaxPlayersValidator("Maximum player limit reached. Cannot add more players.")
+            raise MaxPlayersValidator(
+                "Maximum player limit reached. Cannot add more players."
+            )
 
     @classmethod
     def arrange_players_initially(cls) -> bool:
@@ -91,7 +118,9 @@ class Player():
            bool: True if arrangement is successful, False otherwise.
         """
         try:
-            cls.player_arrangement = Randomizer.arrange_players_initially(cls.player_arrangement)
+            cls.player_arrangement = Randomizer.arrange_players_initially(
+                cls.player_arrangement
+            )
             return True
         except Exception as e:
             print(Fore.RED + f"Error arranging players: {e}")
@@ -109,6 +138,46 @@ class Player():
             return Player.active_face_vals[Randomizer.roll_dice()]
         else:
             return Player.fallen_face_vals[Randomizer.roll_dice()]
+
+    def take_damage(self, damage: int) -> bool | Exception:
+        """
+        Method for player to take damage and update health points (hp).
+        Args:
+            damage (int): The amount of damage to be taken.
+        Returns:
+            bool: True if damage is taken successfully, False otherwise.
+        """
+        ...
+
+    def heal(self, heal_hp: int) -> bool | Exception:
+        """
+        Method for player to heal and update health points (hp).
+        Args:
+            heal_hp (int): The amount of healing to be applied.
+        Returns:
+            bool: True if healing is applied successfully, False otherwise.
+        """
+        ...
+
+    def gain_vp(self, vp: int) -> bool | Exception:
+        """
+        Method for player to gain victory points (vp).
+        Args:
+            vp (int): The amount of victory points to be gained.
+        Returns:
+            bool: True if victory points are gained successfully, False otherwise.
+        """
+        ...
+
+    def steal_vp(self, target_player: Player, vp: int) -> bool | Exception:
+        """
+        Method for player to steal victory points (vp) from another player.
+        Args:
+            target_player (Player): The player from whom victory points are to be stolen.
+            vp (int): The amount of victory points to be stolen.
+        Returns:
+            bool: True if victory points are stolen successfully, False otherwise.
+        """
 
     def __repr__(self) -> str:
         return f"{Fore.GREEN} Player(name={self.name}, hp={self.hp}, vp={self.vp}, status={self.status})"
