@@ -95,7 +95,8 @@ class Player:
             self.participlate_in_game()
         except MaxPlayersValidator as e:
             print(Fore.RED + str(e))
-            exit()
+            raise SystemExit("Syxtem existing gracefully.")
+            # exit()   # Currently commenint gthis down fro the sake of testing
 
         # Arrange players automatically when 5 players have participated
         if len(Player.player_arrangement) == 5:
@@ -143,10 +144,9 @@ class Player:
             Union[ActiveFace, FallenFace]: The enum member representing the dice face outcome
                 for an alive (`ActiveFace`) or fallen (`FallenFace`) player.
         """
-        if self.status == "alive":
+        if self.status == Status.ALIVE:
             return Player.active_face_vals[Randomizer.roll_dice()]
-        else:
-            return Player.fallen_face_vals[Randomizer.roll_dice()]
+        return Player.fallen_face_vals[Randomizer.roll_dice()]
 
     @property
     def __set_player_to_fallen(self) -> bool :
@@ -155,6 +155,11 @@ class Player:
         """
         # No need for re-check as this is a private property
         self.status = Status.FALLEN
+        # Ensuring that hp never stays negative
+        try:
+            self.__hp = max(0, self.__hp)
+        except AttributeError:
+            pass
         return True
 
     def take_damage(self, damage: int) -> bool | InvalidPlayerActionValidator | GameStateValidator:
@@ -165,17 +170,15 @@ class Player:
         Returns:
             bool: True if damage is taken successfully, False otherwise.
         """
-        if damage > 0:
-            if self.status != Status.FALLEN:
-                self.__hp -= damage
-                if (
-                    self.__hp <= 0
-                ):  # check if after updating the dmg player is set to be fallen or not
-                    self.__set_player_to_fallen
-            else:
-                raise InvalidPlayerActionValidator("Fallen Player cannot take further damage")
-        else:
-            raise GameStateValidator("Provided Damage must be non negative")
+        if damage <= 0:
+            raise GameStateValidator("Provided damage must be positive")
+        if self.status == Status.FALLEN:
+            raise InvalidPlayerActionValidator("Fallen player cannot take further damage")
+
+        self.__hp -= damage
+        if self.__hp <= 0:
+            self.__set_player_to_fallen
+        return True
 
     def heal(self, heal_hp: int) -> bool | InvalidPlayerActionValidator | GameStateValidator:
         """
@@ -185,14 +188,13 @@ class Player:
         Returns:
             bool: True if healing is applied successfully, False otherwise.
         """
-        if heal_hp > 0 and heal_hp <= 20:
-            if self.status != Status.FALLEN:
-                self.__hp += heal_hp
-                return True
-            else:
-                raise InvalidPlayerActionValidator("Fallen Player Cannot be healed")
-        else:
-            raise GameStateValidator("Provided heal Vlaue should be within 0-20 ")
+        if not (0 < heal_hp <= 20):
+            raise GameStateValidator("Provided heal value should be within 1-20")
+        if self.status == Status.FALLEN:
+            raise InvalidPlayerActionValidator("Fallen player cannot be healed")
+
+        self.__hp += heal_hp
+        return True
 
     def gain_vp(self, vp_increment: int) -> bool | GameStateValidator:
         """
@@ -202,10 +204,11 @@ class Player:
         Returns:
             bool: True if victory points are gained successfully, False otherwise.
         """
-        if vp_increment > 0 and vp_increment <= 3:
-            self.__vp += vp_increment
-        else:
-            raise GameStateValidator("Game is defiend for vp transcation between 1 to 3")
+        if not (0 < vp_increment <= 3):
+            raise GameStateValidator("Game VP transactions must be between 1 and 3")
+
+        self.__vp += vp_increment
+        return True
 
     def steal_vp(self, target_player: Player, vp_to_steal: int) -> bool | InvalidPlayerActionValidator | GameStateValidator | Exception:
         """
@@ -216,15 +219,18 @@ class Player:
         Returns:
             bool: True if victory points are stolen successfully, False otherwise.
         """
-        if  isinstance(target_player,Player):
-            if target_player.__vp > 0  or target_player.__vp <= vp_to_steal:
-                target_player.__vp -= vp_to_steal
-                self.gain_vp(vp_increment=vp_to_steal)
-                return True
-            else :
-                raise InvalidPlayerActionValidator("Target Player has insufficent vp provided")
-        else:
-            raise Exception("Target player must be the instance of Player class")
+        if not isinstance(target_player, Player):
+            raise Exception("Target player must be an instance of Player class")
+        if vp_to_steal <= 0:
+            raise GameStateValidator("vp_to_steal must be a positive integer")
+
+        # Ensure target has enough vp
+        if target_player.__vp < vp_to_steal:
+            raise InvalidPlayerActionValidator("Target player has insufficient VP")
+
+        target_player.__vp -= vp_to_steal
+        self.gain_vp(vp_increment=vp_to_steal)
+        return True
 
     @property
     def hp(self) -> int:
@@ -236,5 +242,10 @@ class Player:
         """
         return self.__hp
 
+    @property
+    def vp(self) -> int:
+        """getter for vp"""
+        return self.__vp
+
     def __repr__(self) -> str:
-        return f"{Fore.GREEN} Player(name={self.name}, hp={self.hp}, vp={self.vp}, status={self.status})"
+        return f"{Fore.GREEN} Player(name={self.name}, hp={self.hp}, vp={self.vp}, status={self.status.value})"
