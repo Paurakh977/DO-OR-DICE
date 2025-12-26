@@ -18,6 +18,11 @@ class ActiveFace(Enum):
     PICKPOCKET = "Pickpocket"
 
 
+class Status(Enum):
+    FALLEN = "fallen"
+    ALIVE = "alive"
+
+
 class FallenFace(Enum):
     NOTHING_1 = "Nothing"
     PLUS2HP_OR_PLUS1VP = "+2 HP OR +1 VP to any alive player"
@@ -37,7 +42,7 @@ class Player:
         vp (int): The victory points of the player Default is 0.
         status (str): The status of the player (alive or fallen) Default is "alive".
         avatar_url (str): The URL of the player's avatar image Default is "../assests/default.png".
-    
+
     Methods:
         participlate_in_game(): Method for player to participate in the game player list.
         arrange_players_initially(): Class method to arrange players initially in a pseudo-random order.
@@ -69,12 +74,16 @@ class Player:
     }
 
     def __init__(
-        self, name, hp=20, vp=0, status="alive", avatar="../assests/default.png"
+        self,
+        name,
+        hp=20,
+        vp=0,
+        status: Status = Status.ALIVE,
+        avatar="../assests/default.png",
     ) -> None:
-
         self.name = name
-        self.hp = hp
-        self.vp = vp
+        self.__hp = hp
+        self.__vp = vp
         self.avatar_url = avatar
         self.status = status
         self.player_id = None
@@ -139,6 +148,15 @@ class Player:
         else:
             return Player.fallen_face_vals[Randomizer.roll_dice()]
 
+    @property
+    def __set_player_to_fallen(self) -> bool | Exception:
+        """
+        Setter  for __set_player_to_fallen
+        """
+        # No need for re-check as this is a private property
+        self.status = Status.FALLEN
+        return True
+
     def take_damage(self, damage: int) -> bool | Exception:
         """
         Method for player to take damage and update health points (hp).
@@ -147,7 +165,17 @@ class Player:
         Returns:
             bool: True if damage is taken successfully, False otherwise.
         """
-        ...
+        if damage > 0:
+            if self.status != Status.FALLEN:
+                self.__hp -= damage
+                if (
+                    self.__hp <= 0
+                ):  # check if after updating the dmg player is set to be fallen or not
+                    self.__set_player_to_fallen
+            else:
+                raise Exception("Fallen Player cannot take further damage")
+        else:
+            raise Exception("Provided Damage must be non negative")
 
     def heal(self, heal_hp: int) -> bool | Exception:
         """
@@ -157,17 +185,27 @@ class Player:
         Returns:
             bool: True if healing is applied successfully, False otherwise.
         """
-        ...
+        if heal_hp > 0 and heal_hp <= 20:
+            if self.status != Status.FALLEN:
+                self.__hp += heal_hp
+                return True
+            else:
+                raise Exception("Fallen Player Cannot be healed")
+        else:
+            raise Exception("Provided heal Vlaue should be within 0-20 ")
 
-    def gain_vp(self, vp: int) -> bool | Exception:
+    def gain_vp(self, vp_increment: int) -> bool | Exception:
         """
         Method for player to gain victory points (vp).
         Args:
-            vp (int): The amount of victory points to be gained.
+            vp_increment (int): The amount of victory points to be gained.
         Returns:
             bool: True if victory points are gained successfully, False otherwise.
         """
-        ...
+        if vp_increment > 0 and vp_increment <= 3:
+            self.__vp += vp_increment
+        else:
+            raise Exception("Game is defiend for vp transcation between 1 to 3")
 
     def steal_vp(self, target_player: Player, vp: int) -> bool | Exception:
         """
@@ -178,6 +216,17 @@ class Player:
         Returns:
             bool: True if victory points are stolen successfully, False otherwise.
         """
+        ...
+
+    @property
+    def hp(self) -> int:
+        """
+        getter for hp
+
+        :param self: instance of class Player
+        :return: int
+        """
+        return self.__hp
 
     def __repr__(self) -> str:
         return f"{Fore.GREEN} Player(name={self.name}, hp={self.hp}, vp={self.vp}, status={self.status})"
