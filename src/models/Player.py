@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ..utils import MaxPlayersValidator
+from ..utils import MaxPlayersValidator, InvalidPlayerActionValidator, GameStateValidator
 from ..helpers import Randomizer
 from colorama import init, Fore
 from enum import Enum
@@ -149,7 +149,7 @@ class Player:
             return Player.fallen_face_vals[Randomizer.roll_dice()]
 
     @property
-    def __set_player_to_fallen(self) -> bool | Exception:
+    def __set_player_to_fallen(self) -> bool :
         """
         Setter  for __set_player_to_fallen
         """
@@ -157,7 +157,7 @@ class Player:
         self.status = Status.FALLEN
         return True
 
-    def take_damage(self, damage: int) -> bool | Exception:
+    def take_damage(self, damage: int) -> bool | InvalidPlayerActionValidator | GameStateValidator:
         """
         Method for player to take damage and update health points (hp).
         Args:
@@ -173,11 +173,11 @@ class Player:
                 ):  # check if after updating the dmg player is set to be fallen or not
                     self.__set_player_to_fallen
             else:
-                raise Exception("Fallen Player cannot take further damage")
+                raise InvalidPlayerActionValidator("Fallen Player cannot take further damage")
         else:
-            raise Exception("Provided Damage must be non negative")
+            raise GameStateValidator("Provided Damage must be non negative")
 
-    def heal(self, heal_hp: int) -> bool | Exception:
+    def heal(self, heal_hp: int) -> bool | InvalidPlayerActionValidator | GameStateValidator:
         """
         Method for player to heal and update health points (hp).
         Args:
@@ -190,11 +190,11 @@ class Player:
                 self.__hp += heal_hp
                 return True
             else:
-                raise Exception("Fallen Player Cannot be healed")
+                raise InvalidPlayerActionValidator("Fallen Player Cannot be healed")
         else:
-            raise Exception("Provided heal Vlaue should be within 0-20 ")
+            raise GameStateValidator("Provided heal Vlaue should be within 0-20 ")
 
-    def gain_vp(self, vp_increment: int) -> bool | Exception:
+    def gain_vp(self, vp_increment: int) -> bool | GameStateValidator:
         """
         Method for player to gain victory points (vp).
         Args:
@@ -205,18 +205,26 @@ class Player:
         if vp_increment > 0 and vp_increment <= 3:
             self.__vp += vp_increment
         else:
-            raise Exception("Game is defiend for vp transcation between 1 to 3")
+            raise GameStateValidator("Game is defiend for vp transcation between 1 to 3")
 
-    def steal_vp(self, target_player: Player, vp: int) -> bool | Exception:
+    def steal_vp(self, target_player: Player, vp_to_steal: int) -> bool | InvalidPlayerActionValidator | GameStateValidator | Exception:
         """
         Method for player to steal victory points (vp) from another player.
         Args:
             target_player (Player): The player from whom victory points are to be stolen.
-            vp (int): The amount of victory points to be stolen.
+            vp_to_steal (int): The amount of victory points to be stolen.
         Returns:
             bool: True if victory points are stolen successfully, False otherwise.
         """
-        ...
+        if  isinstance(target_player,Player):
+            if target_player.__vp > 0  or target_player.__vp <= vp_to_steal:
+                target_player.__vp -= vp_to_steal
+                self.gain_vp(vp_increment=vp_to_steal)
+                return True
+            else :
+                raise InvalidPlayerActionValidator("Target Player has insufficent vp provided")
+        else:
+            raise Exception("Target player must be the instance of Player class")
 
     @property
     def hp(self) -> int:
