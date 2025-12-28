@@ -57,9 +57,14 @@ class EventRecordValidator:
         rolled_by = mapping["rolled_by"]
         if not isinstance(rolled_by, Player):
             raise InputDataValidator("rolled_by must be a Player instance.")
-        if rolled_by not in participants:
+        
+        #  identity check; fall back to matching by unique name if identity fails
+        if not any((p is rolled_by) or (hasattr(p, "name") and getattr(p, "name") == getattr(rolled_by, "name", None)) for p in participants):
             raise InputDataValidator("rolled_by must be included in participants.")
 
+        # this migh run in the run time too (check later)
+        # if rolled_by not in participants:
+        #     raise InputDataValidator("rolled_by must be included in participants.")
 
         if not isinstance(mapping["dice_face_value"], (ActiveFace, FallenFace)):
             raise InputDataValidator("dice_face_value must be an ActiveFace or FallenFace instance.")

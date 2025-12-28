@@ -3,14 +3,13 @@ from datetime import datetime
 
 from src.models.Player import Player, ActiveFace, FallenFace
 from src.services.History import HistoryService, EventRecord
-from src.utils.valdidators import (
-    EventRecordValidator,
+from src.utils import (
     InputDataValidator,
     MaxPlayersValidator,
     InvalidPlayerActionValidator,
     GameStateValidator,
 )
-
+from src.utils.valdidators import EventRecordValidator
 
 @pytest.fixture(autouse=True)
 def clear_players():
