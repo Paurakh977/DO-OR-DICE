@@ -21,10 +21,6 @@ class EventRecordValidator:
         if not is_dataclass(event) or not isinstance(event, EventRecord):
             raise InputDataValidator("Event must be an instance of EventRecord dataclass.")
 
-        try:
-            mapping = event.__dict__    
-        except Exception:
-            raise InputDataValidator("Unable to convert EventRecord dataclass to mapping.")
 
         # Requities
         required = {
@@ -38,14 +34,14 @@ class EventRecordValidator:
             "vp_stolen",
         }
 
-        missing = required - set(mapping.keys())
+        missing = required - set(event.__dict__.keys())
         if missing:
             raise InputDataValidator(f"EventRecord missing keys: {', '.join(sorted(missing))}")
 
-        if not isinstance(mapping["time_stamp"], datetime):
+        if not isinstance(event.time_stamp, datetime):
             raise InputDataValidator("time_stamp must be a datetime instance.")
 
-        participants = mapping["participants"]
+        participants = event.participants
         if not isinstance(participants, list) or not participants:
             raise InputDataValidator("participants must be a non-empty list of Player instances.")
         if len(participants) > 5:
@@ -54,14 +50,14 @@ class EventRecordValidator:
             if not isinstance(p, Player):
                 raise InputDataValidator("each participant must be a Player instance.")
 
-        rolled_by = mapping["rolled_by"]
+        rolled_by = event.rolled_by
         if not isinstance(rolled_by, Player):
             raise InputDataValidator("rolled_by must be a Player instance.")
         
         if rolled_by not in participants:
             raise InputDataValidator("rolled_by must be included in participants.")
 
-        if not isinstance(mapping["dice_face_value"], (ActiveFace, FallenFace)):
+        if not isinstance(event.dice_face_value, (ActiveFace, FallenFace)):
             raise InputDataValidator("dice_face_value must be an ActiveFace or FallenFace instance.")
 
         def _validate_player_int_list(name: str, low: int, high: int) -> None:
@@ -69,7 +65,7 @@ class EventRecordValidator:
 
             Ensures each tuple has a Player and an int within [low, high].
             """
-            val = mapping.get(name)
+            val = getattr(event, name)
             if val is None:
                 return
             if not isinstance(val, list) or not val:
@@ -91,10 +87,10 @@ class EventRecordValidator:
         #  only one of these effect groups may be present
         #damge deal bha ko action ma healing, vp transaction is not possible. 
         effects = [
-            mapping.get("damage_dealt") is not None,
-            mapping.get("healing_done") is not None,
-            mapping.get("vp_gained") is not None,
-            mapping.get("vp_stolen") is not None,
+            getattr(event, "damage_dealt") is not None,
+            getattr(event, "healing_done") is not None,
+            getattr(event, "vp_gained") is not None,
+            getattr(event, "vp_stolen") is not None,
         ]
         if sum(1 for e in effects if e) > 1:
             raise InputDataValidator(
