@@ -5,7 +5,7 @@ from datetime import datetime
 from dataclasses import dataclass
 from ..utils import InputDataValidator
 from ..utils.valdidators import EventRecordValidator  # to aviod circular import
-
+from collections import defaultdict
 from .types import EventRecord
 
 
@@ -100,13 +100,15 @@ class HistoryService:
 
         return False
 
-    def get_events(self, start: int = 0, end: int = -1) -> Dict[int, EventRecord]:
+    def get_events(self, start: int | None = None, end: int | None = None) -> Dict[int, EventRecord]:
         """
         Retrieves the entire game history of events with provided index range.
 
         :return: Dictionary of event_id to EventRecord.
         """
-        return self.history[start:end]
+        event_records = list(self.history.items())[start:end]
+        
+        return dict(event_records)
 
     def refine_event(self, history: Dict[int, EventRecord], **kwargs) -> list[str]:
         """
