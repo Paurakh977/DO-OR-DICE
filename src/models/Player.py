@@ -53,7 +53,7 @@ class Player:
         steal_vp(target_player, vp): Method for player to steal victory points (vp) from another player.
     """
 
-    player_arrangement = list()
+    player_arrangement : list [Player] = list()
 
     active_face_vals = {
         1: ActiveFace.BACKFIRE,
