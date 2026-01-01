@@ -37,9 +37,12 @@ class IngameRankService:
     @staticmethod
     def update_ranks() -> bool:
         """Rebuild `ranks` sorted by vp_count desc, then hp desc."""
+        # sorting by vp in desc order then hp desc and if hp ties then player_name asc for  tiebreaking
         sorted_rankings = sorted(
             IngameRankService.ranks.items(),
-            key=lambda item: (-item[1]["vp_count"], -item[1]["hp"]),
+            key=lambda item: (
+                -item[1]["vp_count"], -item[1]["hp"], item[1]["player_name"]
+            ),
         )
 
         new_ranks: Dict[int, RankRecord] = {}
@@ -55,7 +58,9 @@ class IngameRankService:
         """Return True and update ranks if ordering has changed."""
         sorted_rankings = sorted(
             IngameRankService.ranks.items(),
-            key=lambda item: (-item[1]["vp_count"], -item[1]["hp"]),
+            key=lambda item: (
+                -item[1]["vp_count"], -item[1]["hp"], item[1]["player_name"]
+            ),
         )
 
         for rank, (key, _) in enumerate(sorted_rankings, start=1):
