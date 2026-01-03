@@ -14,7 +14,7 @@ class TurnResolverService():
     participants : list[Player] =[]
 
     def __init__(self, action_service: Action_service) -> None:
-        self.ingame_action_service = action_service
+        self.ingame_action_service : Action_service = action_service
 
     @classmethod 
     def set_participants(cls, players: list[Player]) -> None:
@@ -28,7 +28,7 @@ class TurnResolverService():
         """
         cls.participants = players
 
-    def look_up_targets(self,player: Player , action: ActiveFace | FallenFace ) -> bool:
+    def target_lookup(self,player: Player , action: ActiveFace | FallenFace ) -> bool:
         """
         Method to guide of the acrtion needs a target to be chosen or not
         :return: True if needed target else False
@@ -66,7 +66,7 @@ class TurnResolverService():
                     raise GameStateValidator("Invalid choice for POWER_MOVE")
                 continue
 
-            if self.look_up_targets(player, face_value):
+            if self.target_lookup(player, face_value):
                 # this will be later replaced by actual py game ui button
                 target_player = input(f"Select target player for {player.name} action {face_value.value}: ")
 
