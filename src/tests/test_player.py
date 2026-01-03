@@ -1,6 +1,7 @@
 import pytest
 
-from src.models.Player import Player, Status, ActiveFace, FallenFace
+from src.models.Player import Player
+from src.models.Dice import ActiveFace, FallenFace, Status
 from src.helpers import Randomizer
 from src.utils import (
     MaxPlayersValidator,
