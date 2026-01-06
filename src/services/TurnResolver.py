@@ -9,6 +9,8 @@ class TurnResolverService():
     """
     Docstring for services.turnresolver:
     This service is responsible for resolving player turns in the game, taking and updating actions of each event of the game cycle.
+    __init__ method parameters: 
+    - action_service (Action_service): An instance of Action_service to handle player actions.
     """
     MAX_ROUNDS :int = CONFIG_MAX_ROUNDS
     CURRENT_ROUND :int = 0
