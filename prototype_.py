@@ -35,9 +35,10 @@ PLAYER_PROFILES = {
 }
 
 # --- MINIMALIST PRO THEME ---
-C_BG        = (14, 16, 22)       # Dark Slate (Main BG)
-C_SIDEBAR   = (20, 22, 28)       # Sidebar BG
-C_PANEL     = (28, 30, 38)       # Inner Panels/Cards
+C_BG        = (10, 12, 18)       # Darker Deep Space
+C_SIDEBAR   = (15, 17, 22)       # Sidebar BG
+C_PANEL     = (25, 27, 35)       # Inner Panels/Cards
+C_GRID      = (30, 35, 50)       # Grid Lines
 C_LINE      = (40, 42, 50)       # Borders
 C_TEXT_MAIN = (235, 240, 245)    # Primary Text
 C_TEXT_DIM  = (130, 135, 145)    # Secondary Text
@@ -46,7 +47,7 @@ C_DANGER    = (235, 80, 85)      # Coral Red
 C_SUCCESS   = (70, 200, 150)     # Seafoam Green
 C_GOLD      = (245, 195, 60)     # Amber
 C_PURPLE    = (160, 110, 235)    # Iris
-C_SHADOW    = (0, 0, 0, 60)      # Alpha Shadow
+C_SHADOW    = (0, 0, 0, 80)      # Alpha Shadow
 
 # --- HELPER FUNCTIONS ---
 def draw_rounded_rect(surf, color, rect, rad=10, alpha=255):
@@ -273,13 +274,18 @@ class Dice:
         self.timer = 0
         self.target = 1
         self.offset = (0,0)
+        self.hover_scale = 1.0
 
     def roll(self, target):
         self.rolling = True
         self.timer = 40
         self.target = target
 
-    def update(self):
+    def update(self, hover):
+        # Interactive hover spring
+        target_s = 1.1 if hover else 1.0
+        self.hover_scale += (target_s - self.hover_scale) * 0.2
+
         if self.rolling:
             self.timer -= 1
             self.offset = (random.randint(-2,2), random.randint(-2,2))
@@ -291,28 +297,30 @@ class Dice:
                 return True
         return False
 
-    def draw(self, surf, hover):
+    def draw(self, surf):
         cx, cy = self.rect.centerx + self.offset[0], self.rect.centery + self.offset[1]
-        sz = 100 if not hover else 105 
+        sz = int(100 * self.hover_scale)
         
-        # Glow Effect
-        if self.rolling:
-             draw_smooth_circle(surf, (*C_ACCENT, 50), (cx, cy), sz * 0.8)
+        # Glow Effect on Hover/Roll
+        if self.rolling or self.hover_scale > 1.01:
+             pulse = 50 + int(math.sin(pygame.time.get_ticks() * 0.01) * 20)
+             draw_smooth_circle(surf, (*C_ACCENT, pulse), (cx, cy), sz * 0.7)
 
         # Shadow
         shadow_rect = pygame.Rect(0,0, sz, sz)
-        shadow_rect.center = (cx, cy + 8)
+        shadow_rect.center = (cx, cy + 10)
         draw_rounded_rect(surf, (0,0,0), shadow_rect, 24, 60)
 
         # Body
         main_rect = pygame.Rect(0,0, sz, sz)
         main_rect.center = (cx, cy)
-        col = (245, 245, 250) if not self.rolling else (200, 220, 255)
-        # Gradient simulated by layers
+        col = (245, 245, 250) if not self.rolling else (220, 230, 255)
+        
         draw_rounded_rect(surf, col, main_rect, 24)
         
         # Border
-        pygame.draw.rect(surf, (200,200,210), main_rect, 2, border_radius=24)
+        b_col = (200,200,210) if not self.rolling else C_ACCENT
+        pygame.draw.rect(surf, b_col, main_rect, 3, border_radius=24)
 
         # Pips
         pip_col = (40, 45, 60)
@@ -332,7 +340,7 @@ class Dice:
             pygame.draw.circle(surf, pip_col, (cx + dx*space, cy + dy*space), pip_sz)
 
         # "ROLL" Hint
-        if not self.rolling and hover:
+        if not self.rolling and self.hover_scale > 1.01:
             f = pygame.font.SysFont("Verdana", 10, bold=True)
             t = f.render("ROLL", True, (100,100,100))
             surf.blit(t, t.get_rect(center=(cx, main_rect.bottom + 15)))
@@ -360,9 +368,50 @@ class Game:
         self.last_played_player = -1
         self.current_audio = None
         
+        # Move Display
+        self.move_display = None  # {"text": str, "color": tuple, "timer": int}
+        
+        # Audio & Background Extras
+        self.audio_cooldown = 0
+        self.bg_scroll = 0
+        self.bg_particles = [[random.randint(0, DEFAULT_W), random.randint(0, DEFAULT_H), random.randint(1,3)] for _ in range(30)]
+        
         self.layout(DEFAULT_W, DEFAULT_H)
         self.add_log("System Ready. Game Initialized.", C_SUCCESS)
         self.play_audio()
+        
+    def draw_bg(self):
+        # 0. Base
+        self.screen.fill(C_BG)
+        
+        # 1. Scrolling Grid
+        self.bg_scroll = (self.bg_scroll + 0.2) % 60
+        grid_sz = 60
+        rows = self.h // grid_sz + 2
+        cols = (self.w - 320) // grid_sz + 2
+        
+        for y in range(rows):
+            pygame.draw.line(self.screen, C_GRID, (0, y*grid_sz + self.bg_scroll - 60), (self.w-340, y*grid_sz + self.bg_scroll - 60))
+        for x in range(cols):
+            pygame.draw.line(self.screen, C_GRID, (x*grid_sz, 0), (x*grid_sz, self.h))
+
+        # 2. Ambient Particles
+        for p in self.bg_particles:
+            p[1] -= p[2] * 0.2 # Float up
+            if p[1] < -10: 
+                p[1] = self.h + 10
+                p[0] = random.randint(0, self.w - 340)
+            
+            val = 50 + (p[2] * 40)
+            pygame.draw.circle(self.screen, (val, val, val+20), (int(p[0]), int(p[1])), p[2])
+            
+        # 3. Vignette Overlay (Simulated)
+        # Using a few big circles with low alpha on the corners/edges
+        v = pygame.Surface((self.w - 340, self.h), pygame.SRCALPHA)
+        pygame.draw.rect(v, (5, 5, 10, 80), v.get_rect()) # Dim everything slightly
+        # Center glow cutout (by drawing darker around) - simple approach: just draw dark corners
+        self.screen.blit(v, (0,0))
+
 
     def layout(self, w, h):
         self.manager.set_window_resolution((w, h))
@@ -398,11 +447,11 @@ class Game:
             btn.action = actions[i]
             self.buttons.append(btn)
 
-    def play_audio(self):
+    def play_audio(self, force=False):
         p = self.players[self.turn]
         
-        # Logic to only play once per turn per player
-        if self.last_played_player != p.idx:
+        # Logic to only play if new player turn OR forced loop
+        if self.last_played_player != p.idx or force:
             self.last_played_player = p.idx
             if self.voice_channel.get_busy(): self.voice_channel.stop()
             if p.sound: self.voice_channel.play(p.sound)
@@ -411,19 +460,21 @@ class Game:
     def roll_dice(self):
         self.state = "ROLLING"
         p = self.players[self.turn]
-        # Ensure audio plays if somehow missed
+        # Restart audio cooldown prevent double loop immediately
+        self.voice_channel.stop()
+        self.last_played_player = -1 # Force replay next time if needed
         self.play_audio()
         
         roll = random.randint(1, 6)
         
         # Rules Logic
         live_rules = {
-            1: ("CRITICAL FAIL", "Take 3 DMG", C_DANGER, "self_dmg", 3),
-            2: ("QUICK JAB", "Deal 2 DMG", C_TEXT_MAIN, "target_dmg", 2),
-            3: ("THIEF", "Steal 1 VP", C_PURPLE, "steal", 1),
-            4: ("HEAVY STRIKE", "Deal 4 DMG", C_TEXT_MAIN, "target_dmg", 4),
-            5: ("REGENERATE", "Heal 3 HP", C_SUCCESS, "heal", 3),
-            6: ("ULTIMATE", "Choice: DMG or VP", C_GOLD, "choice", 0)
+            1: ("BACKFIRE", "Take 3 DMG", C_DANGER, "self_dmg", 3),
+            2: ("JAB", "Deal 2 DMG", C_TEXT_MAIN, "target_dmg", 2),
+            3: ("PICKPOCKET", "Steal 1 VP", C_PURPLE, "steal", 1),
+            4: ("STRIKE", "Deal 4 DMG", C_TEXT_MAIN, "target_dmg", 4),
+            5: ("RECOVER", "Heal 3 HP", C_SUCCESS, "heal", 3),
+            6: ("POWER MOVE", "Choice: DMG or VP", C_GOLD, "choice", 0)
         }
         dead_rules = {
             1: ("VOID MIST", "No Effect", C_TEXT_DIM, "none", 0),
@@ -446,6 +497,9 @@ class Game:
         act = self.payload['type']
         val = self.payload['val']
         col = self.payload['color']
+        
+        # Display move on screen
+        self.move_display = {"text": self.prompt, "color": col, "timer": 120}
         
         self.add_log(f"{p.name} rolled {self.dice.val}", col)
         
@@ -613,14 +667,31 @@ class Game:
                 self.manager.process_events(event)
 
             # --- UPDATES ---
+            # Calculate dice hover ONCE
+            dice_hover = self.dice.rect.collidepoint((mx,my))
+            
             if self.state == "ROLLING":
-                if self.dice.update(): self.finish_roll()
+                if self.dice.update(dice_hover): self.finish_roll()
+            else:
+                # Update hover state when not rolling
+                self.dice.update(dice_hover)
             
             for p in self.players: p.update(p.rect.collidepoint((mx,my)))
+            
+            # --- AUDIO LOOP LOGIC ---
+            # If waiting for roll and audio finished
+            if self.state == "IDLE" and not self.voice_channel.get_busy():
+                self.audio_cooldown += dt
+                if self.audio_cooldown > 1.0: # 1 Second Delay
+                    self.play_audio(force=True)
+                    self.audio_cooldown = 0
+            else:
+                 self.audio_cooldown = 0
+                 
             self.manager.update(dt)
 
             # --- DRAW ---
-            self.screen.fill(C_BG)
+            self.draw_bg()
             
             # 1. Sidebar Background & Decor
             pygame.draw.rect(self.screen, C_SIDEBAR, self.sidebar_rect)
@@ -646,7 +717,7 @@ class Game:
                     pygame.draw.line(self.screen, (30,30,35), (cx, cy), active_p.pos, 2)
 
             # 3. Dice
-            self.dice.draw(self.screen, self.dice.rect.collidepoint((mx,my)))
+            self.dice.draw(self.screen)
 
             # 4. Players
             for p in self.players:
@@ -657,6 +728,31 @@ class Game:
                     else: is_target = (p.alive and p.idx != self.turn)
                 
                 p.draw(self.screen, is_active, is_target)
+            
+            # 4.5 Move Display (Modern & Minimal)
+            if self.move_display:
+                self.move_display['timer'] -= 1
+                if self.move_display['timer'] <= 0:
+                    self.move_display = None
+                else:
+                    # Fade effect
+                    alpha = int((self.move_display['timer'] / 120) * 255)
+                    
+                    # Minimal Text above dice
+                    font_move = pygame.font.SysFont("Verdana", 48, bold=True)
+                    txt = self.move_display['text'].upper()
+                    
+                    # Shadow
+                    move_surf_s = font_move.render(txt, True, (0,0,0))
+                    move_surf_s.set_alpha(max(0, alpha-50))
+                    r_s = move_surf_s.get_rect(center=(cx+2, cy - 128))
+                    self.screen.blit(move_surf_s, r_s)
+                    
+                    # Main Text
+                    move_surf = font_move.render(txt, True, self.move_display['color'])
+                    move_surf.set_alpha(alpha)
+                    r_m = move_surf.get_rect(center=(cx, cy - 130))
+                    self.screen.blit(move_surf, r_m)
 
             # 5. Sidebar UI Elements
             
@@ -668,12 +764,53 @@ class Game:
             self.screen.blit(t2, (sx, 56))
             
             # B) Turn/Round Indicator Pill (Top Right of sidebar)
-            round_pill = pygame.Rect(self.w - 90, 20, 70, 24)
-            draw_rounded_rect(self.screen, (40, 42, 48), round_pill, 12, 255)
+            round_pill = pygame.Rect(self.w - 100, 25, 80, 28)
+            draw_rounded_rect(self.screen, (30, 32, 40), round_pill, 8, 255)
             tr = font_particle.render(f"RND {self.round}", True, C_GOLD)
             self.screen.blit(tr, tr.get_rect(center=round_pill.center))
             
-            # C) Log Feed
+            # C) Player Stats Panel (Card Style)
+            stats_y = 110
+            
+            for i, p in enumerate(self.players):
+                card_h = 50
+                card_y = stats_y + (i * (card_h + 10))
+                card_rect = pygame.Rect(self.sidebar_rect.x + 15, card_y, 310, card_h)
+                
+                # Card Background
+                bg_col = (25, 27, 33) if p.alive else (15, 15, 18)
+                border_c = C_ACCENT if p.idx == self.turn else (40, 42, 50)
+                border_w = 2 if p.idx == self.turn else 1
+                
+                draw_rounded_rect(self.screen, bg_col, card_rect, 8)
+                pygame.draw.rect(self.screen, border_c, card_rect, border_w, border_radius=8)
+                
+                # Content
+                # 1. Name
+                nm_col = C_TEXT_MAIN if p.alive else C_TEXT_DIM
+                nm_font = pygame.font.SysFont("Verdana", 13, bold=True)
+                nm_surf = nm_font.render(p.name, True, nm_col)
+                self.screen.blit(nm_surf, (card_rect.x + 12, card_rect.y + 8))
+                
+                # 2. HP Bar
+                bar_bg = pygame.Rect(card_rect.x + 12, card_rect.y + 30, 180, 8)
+                pygame.draw.rect(self.screen, (10, 10, 15), bar_bg, border_radius=4)
+                
+                if p.alive:
+                    pct = max(0, p.hp / p.max_hp)
+                    fill_w = int(180 * pct)
+                    fill_rect = pygame.Rect(card_rect.x + 12, card_rect.y + 30, fill_w, 8)
+                    hp_col = C_SUCCESS if pct > 0.4 else C_DANGER
+                    pygame.draw.rect(self.screen, hp_col, fill_rect, border_radius=4)
+                
+                # 3. VP Badge
+                vp_surf = font_particle.render(f"{p.vp}", True, C_GOLD)
+                # Star icon (simple circle for now)
+                pygame.draw.circle(self.screen, (50, 45, 20), (card_rect.right - 35, card_rect.centery), 16)
+                pygame.draw.circle(self.screen, C_GOLD, (card_rect.right - 35, card_rect.centery), 16, 2)
+                self.screen.blit(vp_surf, vp_surf.get_rect(center=(card_rect.right - 35, card_rect.centery)))
+
+            # D) Log Feed
             if self.log_feed: self.log_feed.draw(self.screen)
 
             # 6. Particles
