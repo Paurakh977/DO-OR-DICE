@@ -34,19 +34,27 @@ PLAYER_PROFILES = {
     4: {"name": "SHERE",      "img": "shere.jpg",       "audio": "shere.mp3"},
 }
 
-# --- MINIMALIST PALETTE ---
-C_BG        = (15, 17, 26)       # Deep Midnight (Background)
-C_SIDEBAR   = (20, 23, 34)       # Sidebar Background
-C_LINE      = (40, 44, 52)       # Subtle dividers
-C_TEXT_MAIN = (230, 236, 240)    # White-ish
-C_TEXT_DIM  = (100, 110, 130)    # Grey-ish
-C_ACCENT    = (110, 140, 250)    # Soft Blue
-C_DANGER    = (235, 90, 90)      # Soft Red
-C_SUCCESS   = (80, 210, 160)     # Soft Mint
-C_GOLD      = (240, 200, 80)     # Soft Gold
-C_PURPLE    = (180, 130, 250)    # Soft Purple
+# --- MINIMALIST PRO THEME ---
+C_BG        = (14, 16, 22)       # Dark Slate (Main BG)
+C_SIDEBAR   = (20, 22, 28)       # Sidebar BG
+C_PANEL     = (28, 30, 38)       # Inner Panels/Cards
+C_LINE      = (40, 42, 50)       # Borders
+C_TEXT_MAIN = (235, 240, 245)    # Primary Text
+C_TEXT_DIM  = (130, 135, 145)    # Secondary Text
+C_ACCENT    = (60, 130, 240)     # Electric Blue
+C_DANGER    = (235, 80, 85)      # Coral Red
+C_SUCCESS   = (70, 200, 150)     # Seafoam Green
+C_GOLD      = (245, 195, 60)     # Amber
+C_PURPLE    = (160, 110, 235)    # Iris
+C_SHADOW    = (0, 0, 0, 60)      # Alpha Shadow
 
 # --- HELPER FUNCTIONS ---
+def draw_rounded_rect(surf, color, rect, rad=10, alpha=255):
+    """Draws a rounded rectangle with optional transparency."""
+    shape = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    pygame.draw.rect(shape, (*color, alpha), shape.get_rect(), border_radius=rad)
+    surf.blit(shape, rect.topleft)
+
 def draw_smooth_circle(surf, color, center, radius):
     """Draws a high-quality anti-aliased circle."""
     x, y = int(center[0]), int(center[1])
@@ -93,33 +101,55 @@ def load_and_crop_avatar(filename, size):
 # --- UI CLASSES ---
 
 class LogFeed:
-    """A custom, minimal log rendering system (Replace UITextBox)."""
+    """A sleek, modern history feed with card-style entries."""
     def __init__(self, x, y, w, h):
         self.rect = pygame.Rect(x, y, w, h)
-        self.messages = [] # List of (text_surf, alpha, y_pos)
-        self.font = pygame.font.SysFont("Consolas", 14)
+        self.messages = [] 
+        self.font = pygame.font.SysFont("Verdana", 12)
+        self.icon_font = pygame.font.SysFont("Segoe UI Symbol", 14)
 
     def add(self, text, color=C_TEXT_MAIN):
-        # Render text immediately
+        # Format: (text_surf, color, anim_offset, alpha)
         surf = self.font.render(text, True, color)
-        self.messages.insert(0, {"surf": surf, "alpha": 255, "life": 300})
-        if len(self.messages) > 12: self.messages.pop()
+        self.messages.insert(0, {"surf": surf, "col": color, "offset": -20, "alpha": 0, "life": 400})
+        if len(self.messages) > 8: self.messages.pop()
 
     def draw(self, screen):
-        # Draw messages from bottom up
-        curr_y = self.rect.bottom - 25
+        # Draw Container Background
+        draw_rounded_rect(screen, C_PANEL, self.rect, 12, 255)
+        # Header
+        pygame.draw.line(screen, C_LINE, (self.rect.x + 10, self.rect.y + 30), (self.rect.right - 10, self.rect.y + 30))
+        head_font = pygame.font.SysFont("Verdana", 11, bold=True)
+        t = head_font.render("GAME HISTORY", True, C_TEXT_DIM)
+        screen.blit(t, (self.rect.x + 15, self.rect.y + 8))
+
+        # Content area clip
+        clip_rect = pygame.Rect(self.rect.x, self.rect.y + 32, self.rect.width, self.rect.height - 35)
+        screen.set_clip(clip_rect)
         
-        for msg in self.messages:
-            if curr_y < self.rect.top: break
+        start_y = self.rect.y + 45
+        
+        for i, msg in enumerate(self.messages):
+            # Animation Logic
+            if msg['offset'] < 0: msg['offset'] += 2
+            if msg['alpha'] < 255: msg['alpha'] += 15
             
-            # Fade logic
-            msg['life'] -= 1
-            if msg['life'] < 50: msg['alpha'] = int((msg['life']/50) * 255)
+            y_pos = start_y + (i * 35)
+            if y_pos > self.rect.bottom: break
             
+            # Entry Background (Alternating subtle)
+            row_rect = pygame.Rect(self.rect.x + 10, y_pos, self.rect.width - 20, 28)
+            # draw_rounded_rect(screen, (40, 42, 50), row_rect, 6, 100 if i%2==0 else 50)
+            
+            # Text
             s = msg['surf'].copy()
             s.set_alpha(msg['alpha'])
-            screen.blit(s, (self.rect.x, curr_y))
-            curr_y -= 22 # Line height
+            screen.blit(s, (self.rect.x + 20 + msg['offset'], y_pos + 6))
+            
+            # Bullet point
+            pygame.draw.circle(screen, msg['col'], (self.rect.x + 12, y_pos + 14), 3)
+
+        screen.set_clip(None)
 
 class Player:
     def __init__(self, idx):
@@ -133,7 +163,7 @@ class Player:
         
         # Visuals
         self.pos = (0,0)
-        self.base_size = 110
+        self.base_size = 120
         self.rect = pygame.Rect(0,0, self.base_size, self.base_size)
         self.scale = 1.0
         self.avatar_surf = load_and_crop_avatar(data.get("img", ""), self.base_size)
@@ -152,71 +182,88 @@ class Player:
         self.rect.center = self.pos
 
     def update(self, is_hovered):
-        target = 1.1 if is_hovered else 1.0
+        target = 1.15 if is_hovered else 1.0
         self.scale += (target - self.scale) * 0.15
 
     def draw(self, surf, is_active, is_target):
         cx, cy = self.pos
         s = self.scale
         
-        # 1. State Colors
-        border_col = C_LINE
-        if not self.alive: 
-            border_col = (30, 30, 30)
-            self.scale = 0.9 # Shrink dead
-        elif is_active: border_col = C_ACCENT
-        elif is_target: border_col = C_DANGER
+        # 0. Shadow
+        shadow_r = int(self.base_size * s * 0.5)
+        draw_smooth_circle(surf, (0,0,0,60), (cx, cy+5), shadow_r + 2)
 
-        # 2. Draw Active Pulse / Glow
+        # 1. Styles
+        border_col = C_LINE
+        border_width = 3
+        
+        if not self.alive: 
+            border_col = (40, 40, 40)
+            self.scale = 0.95 
+        elif is_active: 
+            border_col = C_ACCENT
+            border_width = 4
+        elif is_target: 
+            border_col = C_DANGER
+            border_width = 4
+
+        # 2. Active Glow
         if is_active and self.alive:
-            pulse = 60 + math.sin(pygame.time.get_ticks() * 0.005) * 5
-            draw_smooth_circle(surf, (*C_ACCENT, 30), (cx, cy), pulse * s)
+            pulse = 70 + math.sin(pygame.time.get_ticks() * 0.005) * 5
+            draw_smooth_circle(surf, (*C_ACCENT, 40), (cx, cy), pulse * s)
 
         # 3. Avatar
         if self.avatar_surf:
             final_size = int(self.base_size * s)
             scaled = pygame.transform.smoothscale(self.avatar_surf, (final_size, final_size))
             
-            # Grayscale if dead
+            # Desaturate if dead
             if not self.alive:
                 grayscale = pygame.Surface(scaled.get_size()).convert_alpha()
-                grayscale.fill((30,30,30))
+                grayscale.fill((20,20,25))
                 scaled.blit(grayscale, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
                 
             r = scaled.get_rect(center=(cx, cy))
             surf.blit(scaled, r)
             
-            # Ring Border
-            pygame.draw.circle(surf, border_col, (cx, cy), (final_size//2) + 2, 2)
+            # Crisp Ring Border
+            pygame.draw.circle(surf, border_col, (cx, cy), (final_size//2), border_width)
 
-        # 4. Health Bar (Underneath)
+        # 4. Modern Stats Badge
         if self.alive:
-            bar_w = 80 * s
-            bar_h = 6
-            bar_rect = pygame.Rect(cx - bar_w/2, cy + 65*s, bar_w, bar_h)
+            # HP Bar pill
+            bar_w = 70 * s
+            bar_h = 14 * s
+            bar_rect = pygame.Rect(0, 0, bar_w, bar_h)
+            bar_rect.center = (cx, cy + (60*s))
             
-            # Background
-            pygame.draw.rect(surf, (30,33,40), bar_rect, border_radius=3)
-            # Foreground
+            draw_rounded_rect(surf, (20,20,25), bar_rect, 6)
+            
             pct = max(0, self.hp / self.max_hp)
-            fill_rect = pygame.Rect(cx - bar_w/2, cy + 65*s, bar_w * pct, bar_h)
+            fill_w = int((bar_w-4) * pct)
+            fill_rect = pygame.Rect(bar_rect.x+2, bar_rect.y+2, fill_w, bar_h-4)
             col = C_SUCCESS if pct > 0.4 else C_DANGER
-            pygame.draw.rect(surf, col, fill_rect, border_radius=3)
+            if fill_w > 0:
+                pygame.draw.rect(surf, col, fill_rect, border_radius=4)
+                
+            # VP Badge
+            vp_rect = pygame.Rect(0,0, 40*s, 20*s)
+            vp_rect.center = (cx, cy - (65*s))
+            draw_rounded_rect(surf, C_GOLD, vp_rect, 6)
+            
+            f_vp = pygame.font.SysFont("Verdana", int(12*s), bold=True)
+            t_vp = f_vp.render(f"{self.vp} VP", True, (20,20,20))
+            surf.blit(t_vp, t_vp.get_rect(center=vp_rect.center))
+            
+            # Name
+            f_nm = pygame.font.SysFont("Segoe UI", int(14*s), bold=True)
+            t_nm = f_nm.render(self.name.upper(), True, C_TEXT_MAIN)
+            surf.blit(t_nm, t_nm.get_rect(center=(cx, cy - (82*s))))
 
-        # 5. Text Stats
-        font = pygame.font.SysFont("Consolas", int(12*s), bold=True)
-        
-        # Name (Top)
-        name_surf = font.render(self.name, True, C_TEXT_MAIN if self.alive else C_TEXT_DIM)
-        surf.blit(name_surf, name_surf.get_rect(center=(cx, cy - 70*s)))
-        
-        # Stats (Bottom)
-        if self.alive:
-            stat_surf = font.render(f"{self.hp}HP | {self.vp}VP", True, C_TEXT_DIM)
-            surf.blit(stat_surf, stat_surf.get_rect(center=(cx, cy + 80*s)))
         else:
-            dead_surf = font.render("ELIMINATED", True, C_DANGER)
-            surf.blit(dead_surf, dead_surf.get_rect(center=(cx, cy + 80*s)))
+            f_d = pygame.font.SysFont("Verdana", int(14*s), bold=True)
+            t_d = f_d.render("ELIMINATED", True, C_DANGER)
+            surf.blit(t_d, t_d.get_rect(center=(cx, cy + 60*s)))
 
 class Dice:
     def __init__(self):
@@ -246,23 +293,31 @@ class Dice:
 
     def draw(self, surf, hover):
         cx, cy = self.rect.centerx + self.offset[0], self.rect.centery + self.offset[1]
-        sz = 90 if not hover else 95 # Subtle hover grow
+        sz = 100 if not hover else 105 
         
+        # Glow Effect
+        if self.rolling:
+             draw_smooth_circle(surf, (*C_ACCENT, 50), (cx, cy), sz * 0.8)
+
         # Shadow
         shadow_rect = pygame.Rect(0,0, sz, sz)
-        shadow_rect.center = (cx, cy + 5)
-        pygame.draw.rect(surf, (10,10,12), shadow_rect, border_radius=18)
+        shadow_rect.center = (cx, cy + 8)
+        draw_rounded_rect(surf, (0,0,0), shadow_rect, 24, 60)
 
         # Body
         main_rect = pygame.Rect(0,0, sz, sz)
         main_rect.center = (cx, cy)
-        col = C_TEXT_MAIN if not self.rolling else C_ACCENT
-        pygame.draw.rect(surf, col, main_rect, border_radius=18)
+        col = (245, 245, 250) if not self.rolling else (200, 220, 255)
+        # Gradient simulated by layers
+        draw_rounded_rect(surf, col, main_rect, 24)
+        
+        # Border
+        pygame.draw.rect(surf, (200,200,210), main_rect, 2, border_radius=24)
 
         # Pips
-        pip_col = C_BG
-        pip_sz = 8
-        space = 24
+        pip_col = (40, 45, 60)
+        pip_sz = 9
+        space = 26
         pips = []
         if self.val == 1: pips = [(0,0)]
         elif self.val == 2: pips = [(-1,-1), (1,1)]
@@ -272,12 +327,20 @@ class Dice:
         elif self.val == 6: pips = [(-1,-1), (1,-1), (-1,1), (1,1), (-1,0), (1,0)]
 
         for dx, dy in pips:
+            # Subtle pip shadow
+            pygame.draw.circle(surf, (200,200,200), (cx + dx*space + 1, cy + dy*space + 1), pip_sz)
             pygame.draw.circle(surf, pip_col, (cx + dx*space, cy + dy*space), pip_sz)
+
+        # "ROLL" Hint
+        if not self.rolling and hover:
+            f = pygame.font.SysFont("Verdana", 10, bold=True)
+            t = f.render("ROLL", True, (100,100,100))
+            surf.blit(t, t.get_rect(center=(cx, main_rect.bottom + 15)))
 
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((DEFAULT_W, DEFAULT_H), pygame.RESIZABLE)
-        pygame.display.set_caption("DO OR DICE // MINIMAL")
+        pygame.display.set_caption("DO OR DICE // PRO")
         self.clock = pygame.time.Clock()
         self.manager = pygame_gui.UIManager((DEFAULT_W, DEFAULT_H))
         
@@ -294,6 +357,8 @@ class Game:
         self.payload = None
         self.particles = []
         self.buttons = []
+        self.last_played_player = -1
+        self.current_audio = None
         
         self.layout(DEFAULT_W, DEFAULT_H)
         self.add_log("System Ready. Game Initialized.", C_SUCCESS)
@@ -303,9 +368,9 @@ class Game:
         self.manager.set_window_resolution((w, h))
         self.w, self.h = w, h
         
-        # Sidebar is fixed 300px on the right
-        self.sidebar_rect = pygame.Rect(w - 320, 0, 320, h)
-        self.arena_rect = pygame.Rect(0, 0, w - 320, h)
+        # Sidebar is fixed 320px on the right
+        self.sidebar_rect = pygame.Rect(w - 340, 0, 340, h)
+        self.arena_rect = pygame.Rect(0, 0, w - 340, h)
         
         # Positioning Players
         cx, cy = self.arena_rect.center
@@ -313,8 +378,8 @@ class Game:
         for p in self.players: p.calculate_position((cx, cy), rad)
         self.dice.rect.center = (cx, cy)
         
-        # Log Feed in Sidebar
-        self.log_feed = LogFeed(self.sidebar_rect.x + 20, h - 300, 280, 280)
+        # Log Feed in Sidebar (Bottom)
+        self.log_feed = LogFeed(self.sidebar_rect.x + 20, h - 350, 300, 330)
 
     def add_log(self, text, col=C_TEXT_MAIN):
         if self.log_feed: self.log_feed.add(text, col)
@@ -325,22 +390,28 @@ class Game:
         for b in self.buttons: b.kill()
         self.buttons = []
         
-        start_y = 150
+        start_y = 120
         for i, lbl in enumerate(labels):
-            rect = pygame.Rect(self.sidebar_rect.x + 20, start_y + (i * 50), 280, 40)
+            rect = pygame.Rect(self.sidebar_rect.x + 20, start_y + (i * 45), 300, 38)
+            # We use standard pygame_gui buttons but could skin them
             btn = pygame_gui.elements.UIButton(relative_rect=rect, text=lbl, manager=self.manager)
             btn.action = actions[i]
             self.buttons.append(btn)
 
     def play_audio(self):
         p = self.players[self.turn]
-        if self.voice_channel.get_busy(): self.voice_channel.stop()
-        if p.sound: self.voice_channel.play(p.sound)
+        
+        # Logic to only play once per turn per player
+        if self.last_played_player != p.idx:
+            self.last_played_player = p.idx
+            if self.voice_channel.get_busy(): self.voice_channel.stop()
+            if p.sound: self.voice_channel.play(p.sound)
 
     # --- LOGIC ---
     def roll_dice(self):
         self.state = "ROLLING"
         p = self.players[self.turn]
+        # Ensure audio plays if somehow missed
         self.play_audio()
         
         roll = random.randint(1, 6)
@@ -551,38 +622,58 @@ class Game:
             # --- DRAW ---
             self.screen.fill(C_BG)
             
-            # 1. Sidebar Background
+            # 1. Sidebar Background & Decor
             pygame.draw.rect(self.screen, C_SIDEBAR, self.sidebar_rect)
             pygame.draw.line(self.screen, C_LINE, (self.sidebar_rect.x, 0), (self.sidebar_rect.x, self.h))
+            
+            # Sidebar Header Band
+            pygame.draw.rect(self.screen, C_PANEL, (self.sidebar_rect.x, 0, self.sidebar_rect.width, 90))
+            pygame.draw.line(self.screen, C_LINE, (self.sidebar_rect.x, 90), (self.w, 90))
 
             # 2. Connection Lines (Arena)
             cx, cy = self.arena_rect.center
             active_p = self.players[self.turn]
             if self.state != "GAME_OVER":
-                pygame.draw.line(self.screen, C_LINE, (cx, cy), active_p.pos, 2)
+                # Pulse line
+                alpha = 100 + int(math.sin(pygame.time.get_ticks() * 0.005) * 50)
+                # Draw varied width line
+                if active_p.alive:
+                    color_line = (*C_ACCENT, alpha)
+                    line_surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+                    pygame.draw.line(line_surf, color_line, (cx, cy), active_p.pos, 3)
+                    self.screen.blit(line_surf, (0,0))
+                else:
+                    pygame.draw.line(self.screen, (30,30,35), (cx, cy), active_p.pos, 2)
 
             # 3. Dice
             self.dice.draw(self.screen, self.dice.rect.collidepoint((mx,my)))
 
             # 4. Players
             for p in self.players:
-                is_active = (p == self.players[self.turn])
+                is_active = (p.idx == self.turn)
                 is_target = False
                 if "TARGET" in self.state:
                     if self.state == "TARGET_FALLEN": is_target = not p.alive
-                    else: is_target = (p.alive and p != self.players[self.turn])
+                    else: is_target = (p.alive and p.idx != self.turn)
                 
                 p.draw(self.screen, is_active, is_target)
 
-            # 5. Sidebar UI
-            # Prompt
+            # 5. Sidebar UI Elements
+            
+            # A) Header / Prompt Area
             t1 = font_big.render(self.prompt, True, C_TEXT_MAIN)
             t2 = font_small.render(self.sub_prompt, True, C_ACCENT)
             sx = self.sidebar_rect.x + 20
-            self.screen.blit(t1, (sx, 50))
-            self.screen.blit(t2, (sx, 90))
+            self.screen.blit(t1, (sx, 20))
+            self.screen.blit(t2, (sx, 56))
             
-            # Log Feed
+            # B) Turn/Round Indicator Pill (Top Right of sidebar)
+            round_pill = pygame.Rect(self.w - 90, 20, 70, 24)
+            draw_rounded_rect(self.screen, (40, 42, 48), round_pill, 12, 255)
+            tr = font_particle.render(f"RND {self.round}", True, C_GOLD)
+            self.screen.blit(tr, tr.get_rect(center=round_pill.center))
+            
+            # C) Log Feed
             if self.log_feed: self.log_feed.draw(self.screen)
 
             # 6. Particles
@@ -591,6 +682,11 @@ class Game:
                 part['pos'][1] += part['vel'][1]
                 part['life'] -= 1
                 if part['life'] <= 0: self.particles.remove(part); continue
+                
+                # Shadow first
+                pt_s = font_particle.render(part['text'], True, (0,0,0))
+                pt_s.set_alpha(int((part['life']/60)*100))
+                self.screen.blit(pt_s, (part['pos'][0]+1, part['pos'][1]+1))
                 
                 pt = font_particle.render(part['text'], True, part['col'])
                 pt.set_alpha(int((part['life']/60)*255))
