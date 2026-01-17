@@ -280,6 +280,11 @@ class Dice:
         self.target = 1
         self.offset = (0,0)
         self.hover_scale = 1.0
+        self.faces = {}
+        for i in range(1, 7):
+            path =IMG_DIR / "dice" /f"{i}.png "
+            if path.exists():
+                self.faces[i] = pygame.image.load(path).convert_alpha()
 
     def roll(self, target):
         self.rolling = True
@@ -328,21 +333,12 @@ class Dice:
         pygame.draw.rect(surf, b_col, main_rect, 3, border_radius=24)
 
         # Pips
-        pip_col = (40, 45, 60)
-        pip_sz = 9
-        space = 26
-        pips = []
-        if self.val == 1: pips = [(0,0)]
-        elif self.val == 2: pips = [(-1,-1), (1,1)]
-        elif self.val == 3: pips = [(-1,-1), (0,0), (1,1)]
-        elif self.val == 4: pips = [(-1,-1), (1,-1), (-1,1), (1,1)]
-        elif self.val == 5: pips = [(-1,-1), (1,-1), (-1,1), (1,1), (0,0)]
-        elif self.val == 6: pips = [(-1,-1), (1,-1), (-1,1), (1,1), (-1,0), (1,0)]
-
-        for dx, dy in pips:
-            # Subtle pip shadow
-            pygame.draw.circle(surf, (200,200,200), (cx + dx*space + 1, cy + dy*space + 1), pip_sz)
-            pygame.draw.circle(surf, pip_col, (cx + dx*space, cy + dy*space), pip_sz)
+        if self.val in self.faces:
+            face = self.faces[self.val]
+            icon_size = int(sz * 0.55)
+            face = pygame.transform.smoothscale(face, (icon_size, icon_size))
+            face_rect = face.get_rect(center=(cx, cy))
+            surf.blit(face, face_rect)
 
         # "ROLL" Hint
         if not self.rolling and self.hover_scale > 1.01:
