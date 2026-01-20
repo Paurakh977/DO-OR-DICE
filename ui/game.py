@@ -11,9 +11,9 @@ import pygame.gfxdraw
 import pygame_gui
 
 from .theme import (
-    C_BG, C_SIDEBAR, C_PANEL, C_GRID, C_LINE,
-    C_TEXT_MAIN, C_TEXT_DIM, C_ACCENT, C_DANGER, C_SUCCESS, C_GOLD, C_PURPLE,
-    draw_rounded_rect, draw_smooth_circle, AUD_DIR
+    C_BG_TOP, C_SIDEBAR, C_PANEL, C_GRID, C_LINE,
+    C_TEXT_MAIN, C_TEXT_DIM, C_ACCENT, C_DANGER, C_SUCCESS, C_GOLD, C_PURPLE, C_PINK,
+    draw_rounded_rect, draw_smooth_circle, draw_glass_rect, draw_gradient_bg, AUD_DIR
 )
 from .player_profiles import PLAYER_PROFILES, BGM_FILE
 from .components import LogFeed, PlayerVisual, Dice
@@ -39,7 +39,7 @@ class Game:
         pygame.mixer.init()
         
         self.screen = pygame.display.set_mode((DEFAULT_W, DEFAULT_H), pygame.RESIZABLE)
-        pygame.display.set_caption("DO OR DICE // PRO")
+        pygame.display.set_caption("DO OR DICE")
         self.clock = pygame.time.Clock()
         self.manager = pygame_gui.UIManager((DEFAULT_W, DEFAULT_H))
         
@@ -104,10 +104,11 @@ class Game:
         
         # Audio & Background Extras
         self.audio_cooldown = 0.0
+        self.hovered_player_idx = -1  # Track which player is being hovered
         self.bg_scroll = 0.0
         self.bg_particles = [
-            [random.randint(0, DEFAULT_W), random.randint(0, DEFAULT_H), random.randint(1, 3)]
-            for _ in range(30)
+            [random.randint(0, DEFAULT_W), random.randint(0, DEFAULT_H), random.randint(1, 4)]
+            for _ in range(50)
         ]
         
         self.layout(DEFAULT_W, DEFAULT_H)
@@ -116,37 +117,44 @@ class Game:
 
     def draw_bg(self) -> None:
         """Draw the animated background."""
-        # 0. Base
-        self.screen.fill(C_BG)
+        # 0. Base Gradient
+        draw_gradient_bg(self.screen)
         
-        # 1. Scrolling Grid
-        self.bg_scroll = (self.bg_scroll + 0.2) % 60
-        grid_sz = 60
+        # 1. Scrolling Grid (fainter)
+        self.bg_scroll = (self.bg_scroll + 0.3) % 80
+        grid_sz = 80
         rows = self.h // grid_sz + 2
         cols = (self.w - 320) // grid_sz + 2
         
+        # Draw dotted grid intersections instead of lines for a cleaner look
         for y in range(rows):
-            pygame.draw.line(
-                self.screen, C_GRID,
-                (0, y * grid_sz + self.bg_scroll - 60),
-                (self.w - 340, y * grid_sz + self.bg_scroll - 60)
-            )
-        for x in range(cols):
-            pygame.draw.line(self.screen, C_GRID, (x * grid_sz, 0), (x * grid_sz, self.h))
+            for x in range(cols):
+                px = x * grid_sz
+                py = y * grid_sz + self.bg_scroll - 80
+                pygame.draw.circle(self.screen, (50, 50, 70), (px, py), 1)
 
-        # 2. Ambient Particles
+        # 2. Floating Particles (Stars/Dust)
         for p in self.bg_particles:
-            p[1] -= p[2] * 0.2  # Float up
+            p[1] -= p[2] * 0.3  # Float up
             if p[1] < -10:
                 p[1] = self.h + 10
                 p[0] = random.randint(0, self.w - 340)
             
-            val = 50 + (p[2] * 40)
-            pygame.draw.circle(self.screen, (val, val, val + 20), (int(p[0]), int(p[1])), p[2])
+            # Twinkle
+            alpha = 100 + int(math.sin(pygame.time.get_ticks() * 0.005 + p[0]) * 100)
+            val = 200
+            
+            # varied sizes
+            sz = p[2]
+            if sz == 4: # occasional big star
+                draw_smooth_circle(self.screen, (val, val, 255, alpha), (int(p[0]), int(p[1])), 2)
+            else:
+                self.screen.set_at((int(p[0]), int(p[1])), (val, val, val))
             
         # 3. Vignette Overlay
         v = pygame.Surface((self.w - 340, self.h), pygame.SRCALPHA)
-        pygame.draw.rect(v, (5, 5, 10, 80), v.get_rect())
+        # Radial gradient approximation
+        pygame.draw.rect(v, (0, 0, 10, 50), v.get_rect())
         self.screen.blit(v, (0, 0))
 
     def layout(self, w: int, h: int) -> None:
@@ -187,7 +195,7 @@ class Game:
         btn_spacing = 15
         total_width = len(labels) * btn_width + (len(labels) - 1) * btn_spacing
         start_x = cx - total_width // 2
-        btn_y = cy + 80  # Below the dice
+        btn_y = cy + 100  # Below the dice (increased spacing)
         
         for i, lbl in enumerate(labels):
             rect = pygame.Rect(start_x + i * (btn_width + btn_spacing), btn_y, btn_width, btn_height)
@@ -502,6 +510,17 @@ class Game:
 
     def add_particle(self, pos: tuple, text: str, col: tuple) -> None:
         """Add a floating particle effect."""
+        # Add a burst of confetti if it's a positive event
+        if col == C_SUCCESS or col == C_GOLD:
+            for _ in range(5):
+                 self.particles.append({
+                    "pos": list(pos),
+                    "vel": [random.uniform(-3, 3), random.uniform(-4, -1)],
+                    "text": "★", # Star
+                    "col": random.choice([C_GOLD, C_SUCCESS, C_PINK, C_ACCENT]),
+                    "life": 40
+                })
+
         self.particles.append({
             "pos": list(pos),
             "vel": [random.uniform(-1, 1), -2],
@@ -576,12 +595,11 @@ class Game:
             # --- DRAW ---
             self.draw_bg()
             
-            # 1. Sidebar Background & Decor
-            pygame.draw.rect(self.screen, C_SIDEBAR, self.sidebar_rect)
-            pygame.draw.line(self.screen, C_LINE, (self.sidebar_rect.x, 0), (self.sidebar_rect.x, self.h))
+            # 1. Sidebar Background & Decor (Glassy)
+            # Use glass rect instead of solid fill
+            draw_glass_rect(self.screen, self.sidebar_rect, 0)
             
             # Sidebar Header Band
-            pygame.draw.rect(self.screen, C_PANEL, (self.sidebar_rect.x, 0, self.sidebar_rect.width, 90))
             pygame.draw.line(self.screen, C_LINE, (self.sidebar_rect.x, 90), (self.w, 90))
 
             # 2. Connection Lines (Arena)
@@ -592,6 +610,7 @@ class Game:
                 if active_pv.alive:
                     color_line = (*C_ACCENT, alpha)
                     line_surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+                    # Draw a nice beam
                     pygame.draw.line(line_surf, color_line, (cx, cy), active_pv.pos, 3)
                     self.screen.blit(line_surf, (0, 0))
                 else:
@@ -657,13 +676,14 @@ class Game:
                 card_y = stats_y + (i * (card_h + 10))
                 card_rect = pygame.Rect(self.sidebar_rect.x + 15, card_y, 310, card_h)
                 
-                # Card Background
-                bg_col = (25, 27, 33) if pv.alive else (15, 15, 18)
-                border_c = C_ACCENT if pv.idx == self.turn else (40, 42, 50)
-                border_w = 2 if pv.idx == self.turn else 1
+                # Card Background - Semi transparent
+                bg_col = (40, 42, 55, 180) if pv.alive else (20, 20, 25, 100)
+                
+                # Active border logic
+                if pv.idx == self.turn:
+                    draw_rounded_rect(self.screen, C_ACCENT, pygame.Rect(card_rect.x-2, card_rect.y-2, card_rect.w+4, card_rect.h+4), 8)
                 
                 draw_rounded_rect(self.screen, bg_col, card_rect, 8)
-                pygame.draw.rect(self.screen, border_c, card_rect, border_w, border_radius=8)
                 
                 # Content
                 # 1. Name
@@ -674,7 +694,7 @@ class Game:
                 
                 # 2. HP Bar
                 bar_bg = pygame.Rect(card_rect.x + 12, card_rect.y + 30, 180, 8)
-                pygame.draw.rect(self.screen, (10, 10, 15), bar_bg, border_radius=4)
+                pygame.draw.rect(self.screen, (20, 20, 30), bar_bg, border_radius=4)
                 
                 if pv.alive:
                     pct = max(0, pv.hp / pv.max_hp)
@@ -702,6 +722,9 @@ class Game:
                     self.particles.remove(part)
                     continue
                 
+                # Simple gravity for fun
+                part['vel'][1] += 0.05
+                
                 # Shadow first
                 pt_s = font_particle.render(part['text'], True, (0, 0, 0))
                 pt_s.set_alpha(int((part['life'] / 60) * 100))
@@ -719,4 +742,3 @@ def run_game() -> None:
     """Entry point function to run the game."""
     game = Game()
     game.run()
-
