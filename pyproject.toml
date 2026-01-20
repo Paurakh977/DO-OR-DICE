@@ -1,7 +1,46 @@
 [project]
+
 name = "do-or-dice"
 version = "0.1.0"
-description = "Add your description here"
+
+description = "An interactive python dice basde game made by the students of Kathamndu Data science class of 2029"
+
 readme = "README.md"
+
+authors = [
+    { name = "Paurakh Raj Pandey", email = "pandeypaurakhraj@gmail.com" } ,
+    {name= "Rastriyata Nepal",email="rastriyata.nepal22@gmail.com"}
+]
+license = { text = "MIT" }
+
+keywords = ["game", "dice", "pygame"]
+
+classifiers = [
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "colorama>=0.4.6",
+    "pydantic>=2.12.5",
+    "pygame-ce>=2.5.6",
+    "pygame-gui>=0.6.14",
+    "pytest>=9.0.2",
+    "python-dotenv>=1.2.1",
+    "ruff>=0.14.9",
+]
+[project.optional-dependencies]
+
+dev = ["pytest", "ruff"]
+docs = ["mkdocs", "mkdocs-material"]
+
+[project.scripts]
+
+do-or-dice = "ui.game:run_game"
+
+[tool.pytest.ini_options]
+
+testpaths = ["src/tests"]
+addopts = "-q"
