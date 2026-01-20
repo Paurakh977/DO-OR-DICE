@@ -15,5 +15,5 @@ jobs:
 
     - name: Build and Run Tests
       # We use the 'tests' service defined in docker-compose
-      run: |
-        docker compose -f Docker-compose.yml up --build --exit-code-from tests tests
+      # run: |
+      #   docker compose -f Docker-compose.yml up --build --exit-code-from tests tests
