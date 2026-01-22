@@ -1,76 +1,35 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Github } from "lucide-react"
-import Image from "next/image"
+import { Github, Twitter } from "lucide-react"
 
 export function Footer() {
   return (
-    <footer className="py-16 px-4 border-t border-neutral-100 relative overflow-hidden bg-[#fafafa]">
-      <div className="max-w-6xl mx-auto relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="flex flex-col items-center gap-8"
-        >
-          {/* Logo */}
-          <div className="flex items-center gap-4">
-            <Image
-              src="/images/logo.png"
-              alt="DO or DICE"
-              width={40}
-              height={40}
-              className="opacity-70"
-            />
-            <span
-              className="text-lg font-semibold text-neutral-600"
-              style={{ fontFamily: "var(--font-heading)" }}
-            >
-              DO or DICE
-            </span>
-          </div>
-
-          {/* Links */}
-          <div className="flex items-center gap-8">
-            <a
-              href="#features"
-              className="text-sm text-neutral-400 hover:text-neutral-900 transition-colors"
-            >
-              Features
-            </a>
-            <a
-              href="#gameplay"
-              className="text-sm text-neutral-400 hover:text-neutral-900 transition-colors"
-            >
-              How to Play
-            </a>
-            <a
-              href="#rules"
-              className="text-sm text-neutral-400 hover:text-neutral-900 transition-colors"
-            >
-              Rules
-            </a>
-            <a
-              href="https://github.com/Paurakh977/DO-OR-DICE"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-900 transition-colors"
-            >
-              <Github className="w-4 h-4" />
-              Source
-            </a>
-          </div>
-
-          {/* Divider */}
-          <div className="w-24 h-px bg-neutral-200" />
-
-          {/* Copyright */}
-          <p className="text-xs text-neutral-400">
-            © 2025 DO or DICE. Built with Python & Pygame.
+    <footer className="py-24 px-6 border-t border-neutral-900 bg-[#050505]">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+        <div className="flex flex-col items-center md:items-start gap-4">
+          <span className="text-2xl font-black text-white tracking-tighter" style={{ fontFamily: "var(--font-heading)" }}>
+            DO OR DICE.
+          </span>
+          <p className="text-neutral-500 text-sm">
+            © 2025 Open Source Game.
           </p>
-        </motion.div>
+        </div>
+
+        <div className="flex items-center gap-8">
+          <a href="#" className="text-neutral-400 hover:text-white transition-colors text-sm font-medium">Features</a>
+          <a href="#" className="text-neutral-400 hover:text-white transition-colors text-sm font-medium">Rules</a>
+          <a href="#" className="text-neutral-400 hover:text-white transition-colors text-sm font-medium">Install</a>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <a
+            href="https://github.com/Paurakh977/DO-OR-DICE"
+            className="p-3 rounded-full bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 transition-colors"
+          >
+            <Github size={20} />
+          </a>
+        </div>
       </div>
     </footer>
   )
