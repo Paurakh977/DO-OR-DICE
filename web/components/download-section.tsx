@@ -93,13 +93,13 @@ export function DownloadSection() {
               className="bg-neutral-900 hover:bg-neutral-800 text-white px-12 py-8 text-xl font-semibold gap-3 group rounded-full shadow-2xl shadow-neutral-900/20 hover:shadow-neutral-900/30 transition-all duration-300 hover:scale-105 btn-premium"
               asChild
             >
-              <a href="/DoOrDice.zip" download>
+              <a href="/downloads/DoOrDice.zip" download>
                 <Download className="w-6 h-6 group-hover:-translate-y-1 transition-transform" />
                 Download for Windows
               </a>
             </Button>
             <p className="text-sm text-neutral-400 mt-4">
-              v0.1.0 <span className="text-orange-400">•</span> Free to play <span className="text-orange-400">•</span> ~50MB
+              v 1.0.0 <span className="text-orange-400">•</span> Free to play <span className="text-orange-400">•</span> ~50MB
             </p>
           </motion.div>
 

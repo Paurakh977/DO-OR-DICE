@@ -144,11 +144,10 @@ export function FeaturesSection() {
 
   const y = useTransform(scrollYProgress, [0, 1], [0, -100])
   const y2 = useTransform(scrollYProgress, [0, 1], [0, -200])
-  const columnY = useTransform(scrollYProgress, [0, 1], [20, -40]) // Middle column moves faster/slower - reduced to prevent overlap
   const headerY = useTransform(scrollYProgress, [0, 0.3], [100, 0])
 
   return (
-    <section id="features" className="py-32 px-6 relative bg-black overflow-hidden bg-[url('/noise.png')] bg-repeat" ref={containerRef}>
+    <section id="features" className="relative z-30 isolate py-32 px-6 bg-black overflow-hidden bg-[url('/noise.png')] bg-repeat" ref={containerRef}>
       {/* Ambient Background */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
         <motion.div style={{ y }} className="absolute top-[20%] left-[10%] w-[500px] h-[500px] bg-orange-900/10 rounded-full blur-[120px]" />
@@ -184,21 +183,9 @@ export function FeaturesSection() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          <div className="space-y-6 md:space-y-8">
-            {features.filter((_, i) => i % 3 === 0).map((feature, i) => (
-              <FeatureCard key={feature.title} feature={feature} index={i * 3} />
-            ))}
-          </div>
-          <motion.div style={{ y: columnY }} className="space-y-6 md:space-y-8">
-            {features.filter((_, i) => i % 3 === 1).map((feature, i) => (
-              <FeatureCard key={feature.title} feature={feature} index={i * 3 + 1} />
-            ))}
-          </motion.div>
-          <div className="space-y-6 md:space-y-8">
-            {features.filter((_, i) => i % 3 === 2).map((feature, i) => (
-              <FeatureCard key={feature.title} feature={feature} index={i * 3 + 2} />
-            ))}
-          </div>
+          {features.map((feature, index) => (
+            <FeatureCard key={feature.title} feature={feature} index={index} />
+          ))}
         </div>
       </div>
     </section>

@@ -109,7 +109,7 @@ export function Navigation() {
               className="bg-neutral-900 hover:bg-neutral-800 text-white gap-2 rounded-lg"
               asChild
             >
-              <a href="/DoOrDice.zip" download>
+              <a href="/downloads/DoOrDice.zip" download>
                 <Download className="w-4 h-4" />
                 Get Game
               </a>
@@ -164,7 +164,7 @@ export function Navigation() {
                   className="bg-neutral-900 hover:bg-neutral-800 text-white gap-3 px-8 py-6 text-lg rounded-xl"
                   asChild
                 >
-                  <a href="/DoOrDice.zip" download onClick={() => setIsMobileMenuOpen(false)}>
+                  <a href="/downloads/DoOrDice.zip" download onClick={() => setIsMobileMenuOpen(false)}>
                     <Download className="w-5 h-5" />
                     Download Game
                   </a>

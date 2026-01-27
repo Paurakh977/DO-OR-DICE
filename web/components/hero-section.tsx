@@ -178,7 +178,7 @@ export function HeroSection() {
                                 <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-orange-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
                             </span>
-                            Volcanic Update 2.0
+                            Volcanic Update 1.0
                         </span>
                     </motion.div>
 
@@ -209,7 +209,7 @@ export function HeroSection() {
                             </motion.span>
                         </h1>
                         <p className="text-xl text-neutral-500 max-w-md leading-relaxed font-medium tracking-tight">
-                            Define your fate in a world of physics-based chaos.
+                            Define your fate in a world of chaos.
                             <span className="text-neutral-800 block mt-1 font-semibold">High stakes. Zero mercy.</span>
                         </p>
                     </motion.div>
@@ -222,12 +222,20 @@ export function HeroSection() {
                         className="flex flex-wrap items-center gap-6"
                     >
                         <Button
+                            onClick={() => {
+                                const element = document.querySelector("#download")
+                                element?.scrollIntoView({ behavior: "smooth" })
+                            }}
                             className="h-16 px-10 rounded-full bg-neutral-900 text-white font-bold text-lg hover:bg-neutral-800 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-neutral-900/20 btn-premium group"
                         >
                             <Flame className="mr-2 h-5 w-5 fill-orange-500 text-orange-500 group-hover:scale-110 transition-transform" />
                             Roll the Dice
                         </Button>
                         <Button
+                            onClick={() => {
+                                const element = document.querySelector("#rules")
+                                element?.scrollIntoView({ behavior: "smooth" })
+                            }}
                             variant="link"
                             className="text-neutral-700 font-bold text-lg hover:text-neutral-900 transition-all px-0 group"
                         >
@@ -248,7 +256,7 @@ export function HeroSection() {
                                 className="text-3xl font-black text-neutral-900"
                                 style={{ fontFamily: "var(--font-heading)" }}
                             >
-                                12K+
+                                69+
                             </span>
                             <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                                 Active Players
@@ -260,7 +268,7 @@ export function HeroSection() {
                                 className="text-3xl font-black text-neutral-900"
                                 style={{ fontFamily: "var(--font-heading)" }}
                             >
-                                4.9
+                                6.9 / 5.0
                             </span>
                             <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                                 Global Rating
